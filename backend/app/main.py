@@ -1,3 +1,14 @@
+import sys
+import os
+
+# Add directory paths to sys.path for Vercel Serverless environment compatibility
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -57,38 +68,41 @@ def on_startup():
         print("--> Startup init note:", e)
 
 def seed_initial_data():
-    with Session(engine) as session:
-        # Seed default admin if missing
-        admin = session.exec(select(User).where(User.username == "admin")).first()
-        if not admin:
-            admin = User(
-                username="admin",
-                email="admin@mullajeefoods.com",
-                full_name="Restaurant Admin",
-                hashed_password=get_password_hash("admin123"),
-                is_admin=True,
-                is_active=True
-            )
-            session.add(admin)
-            session.commit()
+    try:
+        with Session(engine) as session:
+            # Seed default admin if missing
+            admin = session.exec(select(User).where(User.username == "admin")).first()
+            if not admin:
+                admin = User(
+                    username="admin",
+                    email="admin@mullajeefoods.com",
+                    full_name="Restaurant Admin",
+                    hashed_password=get_password_hash("admin123"),
+                    is_admin=True,
+                    is_active=True
+                )
+                session.add(admin)
+                session.commit()
 
-        # Seed initial restaurant settings
-        rest_settings = session.exec(select(RestaurantSettings)).first()
-        if not rest_settings:
-            rest_settings = RestaurantSettings(
-                name="Mulla Jee Foods",
-                tagline="Delicious Fast Food, Flame-Grilled Burgers & Crispy Delights",
-                phone="+1 (800) 555-MULLA",
-                email="orders@mullajeefoods.com",
-                address="Main Commercial Avenue, Food City",
-                opening_hours="11:00 AM - 11:30 PM",
-                delivery_fee=150.0,
-                tax_rate=5.0,
-                currency_symbol="Rs. ",
-                is_open=True
-            )
-            session.add(rest_settings)
-            session.commit()
+            # Seed initial restaurant settings
+            rest_settings = session.exec(select(RestaurantSettings)).first()
+            if not rest_settings:
+                rest_settings = RestaurantSettings(
+                    name="Mulla Jee Foods",
+                    tagline="Delicious Fast Food, Flame-Grilled Burgers & Crispy Delights",
+                    phone="+1 (800) 555-MULLA",
+                    email="orders@mullajeefoods.com",
+                    address="Main Commercial Avenue, Food City",
+                    opening_hours="11:00 AM - 11:30 PM",
+                    delivery_fee=150.0,
+                    tax_rate=5.0,
+                    currency_symbol="Rs. ",
+                    is_open=True
+                )
+                session.add(rest_settings)
+                session.commit()
+    except Exception as e:
+        print("--> Seed data note:", e)
 
 @app.get("/")
 def read_root():
