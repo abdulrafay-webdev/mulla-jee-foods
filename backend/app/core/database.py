@@ -1,10 +1,12 @@
 from sqlmodel import SQLModel, create_engine, Session, text
 from app.core.config import settings
 
-# Fix Neon Postgres URL prefix if needed (postgres:// -> postgresql://)
+# Fix Neon Postgres URL prefix for Vercel Serverless Python (use pure-python pg8000 driver)
 db_url = settings.DATABASE_URL
 if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+    db_url = db_url.replace("postgres://", "postgresql+pg8000://", 1)
+elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+"):
+    db_url = db_url.replace("postgresql://", "postgresql+pg8000://", 1)
 
 connect_args = {}
 if db_url.startswith("sqlite"):
@@ -13,15 +15,13 @@ if db_url.startswith("sqlite"):
 engine = create_engine(db_url, echo=False, connect_args=connect_args)
 
 def init_db():
-    SQLModel.metadata.create_all(engine)
-    # Ensure newly added columns like order_note exist on Neon Postgres tables
     try:
+        SQLModel.metadata.create_all(engine)
         with engine.connect() as conn:
             conn.execute(text('ALTER TABLE "order" ADD COLUMN IF NOT EXISTS order_note VARCHAR;'))
             conn.commit()
-            print("--> Verified database migrations (order_note column).")
     except Exception as e:
-        print("--> Table column check note:", e)
+        print("--> DB init note:", e)
 
 def get_session():
     with Session(engine) as session:
